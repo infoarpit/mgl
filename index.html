@@ -238,21 +238,56 @@ async function loadExcel() {
 
   let minHours = 0, maxHours = 0;
 
-  for (let row of rows) {
+// Scan all rows for anything that looks like hours/day totals
+rows.forEach(row => {
 
-    if (!row[0]) continue;
+  if (!row) return;
 
-    const text = row[0].toString().toLowerCase();
+  row.forEach(cell => {
 
-    // match rows like "Hours/Day" or "Hours per day"
-    if (text.includes("hours")) {
+    if (!cell) return;
 
-      // adjust indices if excel format varies
-      minHours = parseFloat(row[4]) || 0;
-      maxHours = parseFloat(row[5]) || 0;
+    const val = cell.toString().toLowerCase();
+
+    // Match variations like:
+    // Hours/day, Hours per day, Total Hours, Hrs/day, etc.
+    if (val.includes("hours") || val.includes("hrs")) {
+
+      // Try to read numbers from same row
+      const nums = row
+        .map(x => parseFloat(x))
+        .filter(x => !isNaN(x) && x > 0);
+
+      if (nums.length >= 1) minHours = nums[0];
+      if (nums.length >= 2) maxHours = nums[1];
+    }
+  });
+});
+
+console.log("Parsed workload values:", { minHours, maxHours });
+alert(
+  "DEBUG READ\n\nMin Hours: " + minHours +
+  "\nMax Hours: " + maxHours +
+  "\n\nIf wrong — send me this output"
+);
+  
+// If still zero, try last numeric row
+if (!minHours && !maxHours) {
+
+  for (let i = rows.length - 1; i >= 0; i--) {
+
+    const nums = rows[i]
+      ?.map(x => parseFloat(x))
+      .filter(x => !isNaN(x) && x > 0);
+
+    if (nums && nums.length > 0) {
+      minHours = nums[0];
+      maxHours = nums[1] || nums[0];
+      break;
     }
   }
-
+}
+  
   if (!minHours && !maxHours)
     return alert("Could not detect workload values in sheet");
 
@@ -362,3 +397,4 @@ function runModel(){
 
 </body>
 </html>
+
