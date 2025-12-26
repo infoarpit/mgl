@@ -4,6 +4,8 @@
 <meta charset="UTF-8" />
 <title>MGL Manpower Optimization Dashboard</title>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 <style>
 
 body {
@@ -86,33 +88,22 @@ button {
   letter-spacing: .3px;
 }
 
-.run-btn {
-  background: #1f3fb3;
-  color: white;
-}
+.run-btn { background: #1f3fb3; color: white; }
+.refresh-btn { background: #6b7280; color: white; }
 
-.refresh-btn {
-  background: #6b7280;
-  color: white;
-}
+.results-card { overflow-x: auto; }
 
-.results-card {
-  overflow-x: auto;
-}
+.success { color: #15803d; font-weight: 600; }
+.warning { color: #b45309; font-weight: 600; }
 
-.success {
-  color: #15803d;
-  font-weight: 600;
-}
+.table-title { font-weight: 600; margin-top: 6px; }
 
-.warning {
-  color: #b45309;
-  font-weight: 600;
-}
-
-.table-title {
-  font-weight: 600;
-  margin-top: 6px;
+.upload-box {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #eef1ff;
+  border: 1px dashed #9ca3af;
 }
 
 </style>
@@ -155,6 +146,12 @@ Executive</textarea>
 
     <label>Capacity per person (hrs/day)</label>
     <input id="capacity" value="6.5">
+
+    <div class="upload-box">
+      <b>Upload Task Sheet (Excel)</b><br>
+      <input type="file" id="excelUpload" accept=".xlsx,.xls">
+      <button onclick="loadExcel()">Import Workload From Excel</button>
+    </div>
 
     <div class="table-title">Workload (hrs/day)</div>
 
@@ -207,17 +204,14 @@ function buildTables(){
   const F=parseLines("functions");
   const R=parseLines("roles");
 
-  // workload table
   let wl = document.querySelector("#workloadTable tbody");
   wl.innerHTML = F.map(f=>
     `<tr><td>${f}</td><td><input class="table-input" value="0"></td></tr>`
   ).join("");
 
-  // headcount table header
   const head = `<tr><th>Function</th>${R.map(r=>`<th>${r}</th>`).join("")}</tr>`;
   document.querySelector("#hcTable thead").innerHTML = head;
 
-  // headcount rows
   const body = F.map(f=>
     `<tr><td>${f}</td>
     ${R.map(()=>`<td><input class="table-input" value="0"></td>`).join("")}
@@ -229,6 +223,69 @@ function buildTables(){
 
 buildTables();
 
+
+// ---------------- Excel Upload + Auto Mapping -----------------
+
+async function loadExcel() {
+
+  const file = document.getElementById("excelUpload").files[0];
+  if (!file) return alert("Please upload an Excel file");
+
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data);
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+  let minHours = 0, maxHours = 0;
+
+  for (let row of rows) {
+
+    if (!row[0]) continue;
+
+    const text = row[0].toString().toLowerCase();
+
+    // match rows like "Hours/Day" or "Hours per day"
+    if (text.includes("hours")) {
+
+      // adjust indices if excel format varies
+      minHours = parseFloat(row[4]) || 0;
+      maxHours = parseFloat(row[5]) || 0;
+    }
+  }
+
+  if (!minHours && !maxHours)
+    return alert("Could not detect workload values in sheet");
+
+  const useMax = confirm("Use MAX workload? (Cancel = use MIN)");
+  const workload = useMax ? maxHours : minHours;
+
+  const func = prompt("Enter Function Name for this Task Sheet:");
+  if (!func) return;
+
+  autoFillWorkload(func, workload);
+  alert("Workload imported for " + func);
+}
+
+
+function autoFillWorkload(func, workload){
+
+  const F = parseLines("functions");
+  const fbox = document.getElementById("functions");
+
+  if (!F.includes(func)) {
+    fbox.value += "\n" + func;
+    buildTables();
+  }
+
+  document.querySelectorAll("#workloadTable tbody tr").forEach(r=>{
+    if (r.children[0].innerText === func) {
+      r.children[1].children[0].value = workload.toFixed(2);
+    }
+  });
+}
+
+
+// ----------------- Optimization Call -----------------
 
 function runModel(){
 
@@ -254,7 +311,7 @@ function runModel(){
   document.getElementById("status").innerHTML =
     "Running optimization…";
 
-  fetch("https://mglbackend-production.up.railway.app/optimize",{
+  fetch("http://127.0.0.1:8000/optimize",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({
@@ -305,4 +362,3 @@ function runModel(){
 
 </body>
 </html>
-
