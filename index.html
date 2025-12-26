@@ -17,7 +17,7 @@ body{
 .header{
   background:#1f3fb3;
   color:white;
-  padding:16px 24px;
+  padding:18px 26px;
   font-size:22px;
   font-weight:600;
 }
@@ -31,13 +31,45 @@ body{
   border-radius:14px;
   padding:16px 18px;
   margin-bottom:14px;
-  box-shadow: 0 8px 16px rgba(0,0,0,.05);
+  box-shadow:0 8px 18px rgba(0,0,0,.06);
   border:1px solid #e4e8ff;
 }
 
 .card h3{
   margin:0 0 8px;
 }
+
+/* -------- Upload UI ---------- */
+
+.uploadBox{
+  border:2px dashed #9aa5ff;
+  border-radius:14px;
+  padding:24px;
+  background:#f8f9ff;
+  cursor:pointer;
+  transition:.2s;
+  text-align:center;
+  display:block;
+}
+
+.uploadBox:hover{
+  background:#eef2ff;
+  border-color:#4656ff;
+}
+
+.uploadTitle{
+  font-size:16px;
+  font-weight:700;
+  color:#1f3fb3;
+}
+
+.uploadSub{
+  font-size:12px;
+  color:#555;
+  margin-top:4px;
+}
+
+/* -------- Tables ---------- */
 
 table{
   width:100%;
@@ -46,24 +78,18 @@ table{
 }
 
 th{
-  background:#eef1ff;
-  border:1px solid #dde2f7;
   padding:8px;
+  border:1px solid #dce3ff;
+  background:#eef1ff;
   font-weight:600;
 }
 
 td{
-  border:1px solid #e5e8f3;
   padding:6px;
+  border:1px solid #e7e9f3;
 }
 
-.tag{
-  font-weight:600;
-}
-
-.green{
-  color:#15803d;
-}
+/* -------- Buttons ---------- */
 
 .btn{
   padding:10px 16px;
@@ -78,8 +104,17 @@ td{
   color:white;
 }
 
+.green{
+  color:#15803d;
+}
+
+.warning{
+  color:#b45309;
+}
+
 </style>
 </head>
+
 
 <body>
 
@@ -90,13 +125,25 @@ td{
 <div class="container">
 
 
-<!-- ===================== UPLOAD SECTION ===================== -->
+<!-- ===================== FILE UPLOAD ===================== -->
 
 <div class="card">
+
   <h3>Upload Employee Task Sheets</h3>
 
-  <input type="file" multiple onchange="handleUpload(event)">
-  <div id="uploadStatus" style="margin-top:6px;color:#555"></div>
+  <label class="uploadBox">
+    <input type="file"
+           id="fileInput"
+           multiple
+           onchange="handleUpload(event)"
+           style="display:none">
+
+    <div class="uploadTitle">📂 Click to Upload Employee Excel Files</div>
+    <div class="uploadSub">or drag & drop files here</div>
+  </label>
+
+  <div id="uploadStatus" style="margin-top:8px;font-weight:600;color:#1f3fb3"></div>
+
 </div>
 
 
@@ -120,7 +167,7 @@ td{
 </div>
 
 
-<!-- ===================== CURRENT HC TABLE ===================== -->
+<!-- ===================== CURRENT HEADCOUNT ===================== -->
 
 <div class="card">
   <h3>Current Manpower (Auto Extracted from Excel)</h3>
@@ -147,25 +194,27 @@ td{
   <button class="btn primary" onclick="runOptimization()">Run Optimization</button>
 
   <div id="status" style="margin-top:8px"></div>
+
 </div>
 
 
 <!-- ===================== RESULTS ===================== -->
 
 <div class="card">
+
   <h3>Optimization Results</h3>
 
   <div id="results"></div>
+
 </div>
+
 
 </div>
 
 
 <script>
 
-// --------------------------------------------
-// GLOBAL STORES
-// --------------------------------------------
+// ---------------- GLOBAL STORES ----------------
 
 let EMPLOYEES = [];
 let FUNCTIONS = {};
@@ -190,9 +239,7 @@ const ROLE_MAP = {
 };
 
 
-// --------------------------------------------
-// FUNCTION DETECTION
-// --------------------------------------------
+// ---------------- FUNCTION DETECTOR ----------------
 
 function detectFunction(rows){
 
@@ -206,10 +253,10 @@ function detectFunction(rows){
   rows.forEach(r=>{
     if(!r[0] || !r[1]) return;
 
-    const k = r[0].toString().toLowerCase();
+    const key = r[0].toString().toLowerCase();
 
-    for(const key of KEYS){
-      if(k.includes(key)){
+    for(const k of KEYS){
+      if(key.includes(k)){
         func = r[1].toString().trim();
         break;
       }
@@ -217,15 +264,13 @@ function detectFunction(rows){
   });
 
   if(!func)
-    func = prompt("Function not detected — enter Function name:") || "Unknown Function";
+    func = prompt("Function not detected — enter Function manually:") || "Unknown Function";
 
   return func;
 }
 
 
-// --------------------------------------------
-// ROLE / DESIGNATION DETECTOR
-// --------------------------------------------
+// ---------------- ROLE DETECTOR ----------------
 
 function detectRole(rows){
 
@@ -256,9 +301,7 @@ function detectRole(rows){
 }
 
 
-// --------------------------------------------
-// ADD EMPLOYEE + AGGREGATE
-// --------------------------------------------
+// ---------------- ADD EMPLOYEE & AGGREGATE ----------------
 
 function addEmployee(func, role, minH, maxH){
 
@@ -266,7 +309,6 @@ function addEmployee(func, role, minH, maxH){
 
   EMPLOYEES.push({ func, role, min:minH, max:maxH, avg:avgH });
 
-  // workload aggregation
   if(!FUNCTIONS[func])
     FUNCTIONS[func] = { employees:0, min:0, max:0, avg:0 };
 
@@ -275,15 +317,12 @@ function addEmployee(func, role, minH, maxH){
   FUNCTIONS[func].max += maxH;
   FUNCTIONS[func].avg += avgH;
 
-  // headcount aggregation
   const key = `${func}|${role}`;
   CURRENT_HC[key] = (CURRENT_HC[key] || 0) + 1;
 }
 
 
-// --------------------------------------------
-// RENDER TABLES
-// --------------------------------------------
+// ---------------- RENDER TABLES ----------------
 
 function renderWorkloadTable(){
 
@@ -291,6 +330,7 @@ function renderWorkloadTable(){
 
   Object.keys(FUNCTIONS).forEach(f=>{
     const d = FUNCTIONS[f];
+
     body += `
       <tr>
         <td>${f}</td>
@@ -325,9 +365,7 @@ function renderHCtable(){
 }
 
 
-// --------------------------------------------
-// FILE UPLOAD HANDLER (MULTIPLE FILES)
-// --------------------------------------------
+// ---------------- FILE UPLOAD HANDLER ----------------
 
 async function handleUpload(evt){
 
@@ -343,7 +381,6 @@ async function handleUpload(evt){
     const func = detectFunction(rows);
     const role = detectRole(rows);
 
-    // numeric workload values
     const nums = rows.flat().filter(x => !isNaN(x) && x>0 && x<24);
 
     const maxH = nums.at(-1);
@@ -359,15 +396,33 @@ async function handleUpload(evt){
 }
 
 
-// --------------------------------------------
-// RUN OPTIMIZATION
-// --------------------------------------------
+// ---------------- DRAG & DROP SUPPORT ----------------
+
+const dropBox = document.querySelector(".uploadBox");
+
+dropBox.addEventListener("dragover", e=>{
+  e.preventDefault();
+  dropBox.style.background="#e0e7ff";
+});
+
+dropBox.addEventListener("dragleave", ()=>{
+  dropBox.style.background="#f8f9ff";
+});
+
+dropBox.addEventListener("drop", e=>{
+  e.preventDefault();
+  dropBox.style.background="#f8f9ff";
+  handleUpload({ target:{ files:e.dataTransfer.files } });
+});
+
+
+// ---------------- RUN OPTIMIZATION ----------------
 
 function runOptimization(){
 
-  document.getElementById("status").innerHTML = "Running optimization…";
+  status.innerHTML = "Running optimization…";
 
-  fetch("http://127.0.0.1:8000/optimize",{
+  fetch("https://mglbackend-production.up.railway.app/optimize",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body:JSON.stringify({
@@ -377,20 +432,19 @@ function runOptimization(){
   .then(r=>r.json())
   .then(data=>{
 
-    document.getElementById("status").innerHTML =
-      `<span class="green">Optimization Completed ✔</span>`;
+    status.innerHTML = `<span class="green">Optimization Completed ✔</span>`;
 
     let html = `
     <table>
-    <tr>
-      <th>Function</th>
-      <th>Role</th>
-      <th>Current</th>
-      <th>Optimal</th>
-      <th>Surplus / Removable</th>
-      <th>Capacity</th>
-      <th>Shortage</th>
-    </tr>`;
+      <tr>
+        <th>Function</th>
+        <th>Role</th>
+        <th>Current</th>
+        <th>Optimal</th>
+        <th>Surplus / Removable</th>
+        <th>Capacity</th>
+        <th>Shortage</th>
+      </tr>`;
 
     data.rows.forEach(r=>{
       html += `
@@ -407,11 +461,10 @@ function runOptimization(){
 
     html += "</table>";
 
-    document.getElementById("results").innerHTML = html;
+    results.innerHTML = html;
   })
   .catch(()=>{
-    document.getElementById("status").innerHTML =
-      "<span style='color:#b45309'>Backend not reachable</span>";
+    status.innerHTML = `<span class="warning">Backend not reachable</span>`;
   });
 }
 
