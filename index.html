@@ -4,162 +4,61 @@
 <meta charset="UTF-8" />
 <title>MGL Manpower Optimization Dashboard</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.19.3/xlsx.full.min.js"></script>
+<!-- Excel Parser -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
-
-body{
-  font-family: Inter, Arial;
-  margin:0;
-  background:#f4f6fb;
-}
-
-.header{
-  background:#1f3fb3;
-  color:white;
-  padding:18px 26px;
-  font-size:22px;
-  font-weight:600;
-}
-
-.container{
-  padding:18px 26px;
-}
-
-.card{
-  background:white;
-  border-radius:14px;
-  padding:16px 18px;
-  margin-bottom:14px;
-  box-shadow:0 8px 18px rgba(0,0,0,.06);
-  border:1px solid #e4e8ff;
-}
-
-.card h3{
-  margin:0 0 8px;
-}
-
-/* -------- Upload UI ---------- */
-
-.uploadBox{
-  border:2px dashed #9aa5ff;
-  border-radius:14px;
-  padding:24px;
-  background:#f8f9ff;
-  cursor:pointer;
-  transition:.2s;
-  text-align:center;
-  display:block;
-}
-
-.uploadBox:hover{
-  background:#eef2ff;
-  border-color:#4656ff;
-}
-
-.uploadTitle{
-  font-size:16px;
-  font-weight:700;
-  color:#1f3fb3;
-}
-
-.uploadSub{
-  font-size:12px;
-  color:#555;
-  margin-top:4px;
-}
-
-/* -------- Tables ---------- */
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:6px;
-}
-
-th{
-  padding:8px;
-  border:1px solid #dce3ff;
-  background:#eef1ff;
-  font-weight:600;
-}
-
-td{
-  padding:6px;
-  border:1px solid #e7e9f3;
-}
-
-/* -------- Buttons ---------- */
-
-.btn{
-  padding:10px 16px;
-  border-radius:12px;
-  border:none;
-  cursor:pointer;
-  font-weight:600;
-}
-
-.primary{
-  background:#1f3fb3;
-  color:white;
-}
-
-.green{
-  color:#15803d;
-}
-
-.warning{
-  color:#b45309;
-}
-
+body { font-family: Inter, Segoe UI, Arial; margin:0; background:#f3f5fa; }
+.header { background:#1f3fb3; color:white; padding:18px 24px; font-size:22px; font-weight:600; }
+.container { padding:18px 24px; }
+.card { background:white; border-radius:14px; padding:16px 18px; margin-bottom:14px;
+        border:1px solid #e6ebff; box-shadow:0 10px 18px rgba(0,0,0,.04); }
+h3 { margin:6px 0 10px 0; }
+table { width:100%; border-collapse:collapse; margin-top:8px; }
+th { background:#eef1ff; padding:8px; border:1px solid #dbe0f5; }
+td { border:1px solid #e2e6f2; padding:6px; }
+input { border-radius:10px; border:1px solid #cfd6ec; padding:6px 8px; width:95%; }
+.button { padding:10px 16px; border-radius:10px; border:none; cursor:pointer; font-weight:600; }
+.run { background:#1f3fb3; color:white; }
+.refresh { background:#6b7280; color:white; }
+.uploadBox { border:2px dashed #3564ff; padding:28px; text-align:center; border-radius:14px;
+             background:#fafbff; cursor:pointer; }
+.success { color:#15803d; font-weight:600; }
+.warn { color:#b45309; font-weight:600; }
 </style>
 </head>
 
-
 <body>
 
-<div class="header">
-  MGL Manpower Optimization Dashboard
-</div>
-
+<div class="header">MGL Manpower Optimization Dashboard</div>
 <div class="container">
 
-
-<!-- ===================== FILE UPLOAD ===================== -->
-
+<!-- Upload Section -->
 <div class="card">
-
   <h3>Upload Employee Task Sheets</h3>
 
   <label class="uploadBox">
-    <input type="file"
-           id="fileInput"
-           multiple
-           onchange="handleUpload(event)"
-           style="display:none">
-
-    <div class="uploadTitle">📂 Click to Upload Employee Excel Files</div>
-    <div class="uploadSub">or drag & drop files here</div>
+    <input id="fileInput" type="file" multiple accept=".xlsx,.xls" style="display:none">
+    📁 Click to Upload Employee Excel Files
+    <br>or drag & drop files here
   </label>
 
-  <div id="uploadStatus" style="margin-top:8px;font-weight:600;color:#1f3fb3"></div>
-
+  <div id="uploadStatus" style="margin-top:8px"></div>
 </div>
 
 
-<!-- ===================== WORKLOAD TABLE ===================== -->
-
+<!-- Workload Summary -->
 <div class="card">
-  <h3>Aggregated Workload (Across All Uploaded Employees)</h3>
+  <h3>Function Workload Summary</h3>
 
   <table id="workTable">
     <thead>
       <tr>
         <th>Function</th>
         <th>Employees</th>
-        <th>Total Min Hours</th>
-        <th>Total Max Hours</th>
-        <th>Total Avg Hours</th>
+        <th>Total Min (hrs/day)</th>
+        <th>Total Max (hrs/day)</th>
+        <th>Total Avg (hrs/day)</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -167,308 +66,210 @@ td{
 </div>
 
 
-<!-- ===================== CURRENT HEADCOUNT ===================== -->
-
+<!-- Headcount Table -->
 <div class="card">
-  <h3>Current Manpower (Auto Extracted from Excel)</h3>
+  <h3>Current Headcount</h3>
 
   <table id="hcTable">
-    <thead>
-      <tr>
-        <th>Function</th>
-        <th>Manager</th>
-        <th>AsstManager</th>
-        <th>Officer</th>
-        <th>Executive</th>
-      </tr>
-    </thead>
+    <thead></thead>
     <tbody></tbody>
   </table>
 </div>
 
 
-<!-- ===================== RUN MODEL ===================== -->
-
+<!-- Run Buttons -->
 <div class="card">
-
-  <button class="btn primary" onclick="runOptimization()">Run Optimization</button>
-
+  <button class="button refresh" onclick="loadWorkload()">Refresh Workload</button>
+  <button class="button run" onclick="runOptimization()">Run Optimization</button>
   <div id="status" style="margin-top:8px"></div>
-
 </div>
 
 
-<!-- ===================== RESULTS ===================== -->
-
+<!-- Results -->
 <div class="card">
-
   <h3>Optimization Results</h3>
-
   <div id="results"></div>
-
 </div>
-
 
 </div>
 
 
 <script>
 
-// ---------------- GLOBAL STORES ----------------
-
-let EMPLOYEES = [];
-let FUNCTIONS = {};
-let CURRENT_HC = {};
-
-const ROLES = ["Manager","AsstManager","Officer","Executive"];
-
-const ROLE_MAP = {
-  "manager":"Manager",
-  "sr manager":"Manager",
-  "senior manager":"Manager",
-
-  "assistant manager":"AsstManager",
-  "asst manager":"AsstManager",
-  "am":"AsstManager",
-
-  "officer":"Officer",
-
-  "executive":"Executive",
-  "jr executive":"Executive",
-  "junior executive":"Executive"
-};
+// --------------------------------------
+// CONFIGURE BACKEND URL
+// --------------------------------------
+const BACKEND = "https://mglbackend-production.up.railway.app";
 
 
-// ---------------- FUNCTION DETECTOR ----------------
+// --------------------------------------
+// FILE UPLOAD HANDLER
+// --------------------------------------
+const fileInput = document.getElementById("fileInput");
+fileInput.addEventListener("change", handleFiles);
 
-function detectFunction(rows){
+async function handleFiles(evt) {
 
-  const KEYS = [
-    "function","department","business unit","vertical",
-    "division","team","sbu","bu","process"
-  ];
+  const files = evt.target.files;
+  document.getElementById("uploadStatus").innerHTML =
+    "Processing files… please wait";
 
-  let func = "";
+  for (let file of files) {
 
-  rows.forEach(r=>{
-    if(!r[0] || !r[1]) return;
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:"array" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet, { header:1 });
 
-    const key = r[0].toString().toLowerCase();
+    // ---- Extract header fields ----
+    let func="", name="", code="";
+    data.forEach(r=>{
+      if(!r || r.length<2) return;
+      const k = String(r[0]).toLowerCase();
 
-    for(const k of KEYS){
-      if(key.includes(k)){
-        func = r[1].toString().trim();
-        break;
-      }
+      if(k.includes("function")) func = r[1];
+      if(k.includes("employee name")) name = r[1];
+      if(k.includes("employee code")) code = r[1];
+    });
+
+    if(!func){
+      alert("Could not detect Function in: " + file.name);
+      continue;
     }
-  });
 
-  if(!func)
-    func = prompt("Function not detected — enter Function manually:") || "Unknown Function";
+    // ---- Detect workload mins & max ----
+    let nums=[];
+    data.flat().forEach(v=>{
+      if(typeof v==="number" && v>0 && v<24) nums.push(v);
+    });
 
-  return func;
-}
-
-
-// ---------------- ROLE DETECTOR ----------------
-
-function detectRole(rows){
-
-  let role = "Executive";
-
-  rows.forEach(r=>{
-    if(!r[0] || !r[1]) return;
-
-    const key = r[0].toString().toLowerCase();
-    const val = r[1].toString().toLowerCase();
-
-    if(
-      key.includes("role") ||
-      key.includes("designation") ||
-      key.includes("employee grade") ||
-      key.includes("position")
-    ){
-      for(const k in ROLE_MAP){
-        if(val.includes(k)){
-          role = ROLE_MAP[k];
-          break;
-        }
-      }
+    if(nums.length===0){
+      alert("No valid workload values in: " + file.name);
+      continue;
     }
-  });
 
-  return role;
+    const min = nums.at(-2) ?? nums.at(-1);
+    const max = nums.at(-1);
+    const avg = (min+max)/2;
+
+    // ---- Send to backend ----
+    await fetch(BACKEND + "/upload_sheet",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ name, code, func, min, max, avg })
+    });
+  }
+
+  document.getElementById("uploadStatus").innerHTML =
+    "<span class='success'>Upload complete ✔</span>";
+
+  loadWorkload();
 }
 
 
-// ---------------- ADD EMPLOYEE & AGGREGATE ----------------
 
-function addEmployee(func, role, minH, maxH){
+// --------------------------------------
+// LOAD WORKLOAD SUMMARY
+// --------------------------------------
+async function loadWorkload(){
 
-  const avgH = (minH + maxH) / 2;
+  const res = await fetch(BACKEND + "/workload");
+  const data = await res.json();
 
-  EMPLOYEES.push({ func, role, min:minH, max:maxH, avg:avgH });
+  const tbody = document.querySelector("#workTable tbody");
+  tbody.innerHTML="";
 
-  if(!FUNCTIONS[func])
-    FUNCTIONS[func] = { employees:0, min:0, max:0, avg:0 };
-
-  FUNCTIONS[func].employees++;
-  FUNCTIONS[func].min += minH;
-  FUNCTIONS[func].max += maxH;
-  FUNCTIONS[func].avg += avgH;
-
-  const key = `${func}|${role}`;
-  CURRENT_HC[key] = (CURRENT_HC[key] || 0) + 1;
-}
-
-
-// ---------------- RENDER TABLES ----------------
-
-function renderWorkloadTable(){
-
-  let body = "";
-
-  Object.keys(FUNCTIONS).forEach(f=>{
-    const d = FUNCTIONS[f];
-
-    body += `
+  Object.entries(data.functions).forEach(([f,v])=>{
+    tbody.innerHTML += `
       <tr>
         <td>${f}</td>
-        <td>${d.employees}</td>
-        <td>${d.min.toFixed(2)}</td>
-        <td>${d.max.toFixed(2)}</td>
-        <td>${d.avg.toFixed(2)}</td>
+        <td>${v.employees}</td>
+        <td>${v.min.toFixed(2)}</td>
+        <td>${v.max.toFixed(2)}</td>
+        <td>${v.avg.toFixed(2)}</td>
       </tr>`;
   });
 
-  document.querySelector("#workTable tbody").innerHTML = body;
+  buildHeadcountTable(Object.keys(data.functions));
 }
 
 
-function renderHCtable(){
 
-  let body = "";
+// --------------------------------------
+// BUILD HEADCOUNT GRID
+// --------------------------------------
+function buildHeadcountTable(F){
 
-  Object.keys(FUNCTIONS).forEach(f=>{
+  const R = ["Manager","AsstManager","Officer","Executive"];
 
-    body += `<tr><td>${f}</td>`;
+  document.querySelector("#hcTable thead").innerHTML =
+    `<tr><th>Function</th>${R.map(r=>`<th>${r}</th>`).join("")}</tr>`;
 
-    ROLES.forEach(role=>{
-      const key = `${f}|${role}`;
-      body += `<td>${CURRENT_HC[key] || 0}</td>`;
-    });
-
-    body += `</tr>`;
-  });
+  const body = F.map(f=>`
+    <tr>
+      <td>${f}</td>
+      ${R.map(()=>`<td><input value="0"></td>`).join("")}
+    </tr>`).join("");
 
   document.querySelector("#hcTable tbody").innerHTML = body;
 }
 
 
-// ---------------- FILE UPLOAD HANDLER ----------------
 
-async function handleUpload(evt){
+// --------------------------------------
+// RUN OPTIMIZATION
+// --------------------------------------
+async function runOptimization(){
 
-  const files = evt.target.files;
+  document.getElementById("status").innerHTML = "Running…";
 
-  for(const file of files){
+  const N_current={};
+  const R=["Manager","AsstManager","Officer","Executive"];
 
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf,{type:"array"});
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet,{header:1});
+  document.querySelectorAll("#hcTable tbody tr").forEach(row=>{
+    const f=row.children[0].innerText;
+    R.forEach((r,i)=>{
+      N_current[`${f}|${r}`] =
+        parseInt(row.children[i+1].children[0].value || 0);
+    });
+  });
 
-    const func = detectFunction(rows);
-    const role = detectRole(rows);
-
-    const nums = rows.flat().filter(x => !isNaN(x) && x>0 && x<24);
-
-    const maxH = nums.at(-1);
-    const minH = nums.length>1 ? nums.at(-2) : maxH;
-
-    addEmployee(func, role, minH, maxH);
-  }
-
-  uploadStatus.innerHTML = `${files.length} file(s) processed`;
-
-  renderWorkloadTable();
-  renderHCtable();
-}
-
-
-// ---------------- DRAG & DROP SUPPORT ----------------
-
-const dropBox = document.querySelector(".uploadBox");
-
-dropBox.addEventListener("dragover", e=>{
-  e.preventDefault();
-  dropBox.style.background="#e0e7ff";
-});
-
-dropBox.addEventListener("dragleave", ()=>{
-  dropBox.style.background="#f8f9ff";
-});
-
-dropBox.addEventListener("drop", e=>{
-  e.preventDefault();
-  dropBox.style.background="#f8f9ff";
-  handleUpload({ target:{ files:e.dataTransfer.files } });
-});
-
-
-// ---------------- RUN OPTIMIZATION ----------------
-
-function runOptimization(){
-
-  status.innerHTML = "Running optimization…";
-
-  fetch("https://mglbackend-production.up.railway.app/optimize",{
+  const res = await fetch(BACKEND + "/optimize",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      N_current: CURRENT_HC
-    })
-  })
-  .then(r=>r.json())
-  .then(data=>{
-
-    status.innerHTML = `<span class="green">Optimization Completed ✔</span>`;
-
-    let html = `
-    <table>
-      <tr>
-        <th>Function</th>
-        <th>Role</th>
-        <th>Current</th>
-        <th>Optimal</th>
-        <th>Surplus / Removable</th>
-        <th>Capacity</th>
-        <th>Shortage</th>
-      </tr>`;
-
-    data.rows.forEach(r=>{
-      html += `
-      <tr>
-        <td>${r.Function}</td>
-        <td>${r.Role}</td>
-        <td>${r.Current}</td>
-        <td>${r.Optimal}</td>
-        <td>${r.Removed}</td>
-        <td>${r.Capacity}</td>
-        <td>${r.Shortage}</td>
-      </tr>`;
-    });
-
-    html += "</table>";
-
-    results.innerHTML = html;
-  })
-  .catch(()=>{
-    status.innerHTML = `<span class="warning">Backend not reachable</span>`;
+    body:JSON.stringify({ N_current })
   });
+
+  const data = await res.json();
+
+  document.getElementById("status").innerHTML =
+    "<span class='success'>Optimization complete ✔</span>";
+
+  let html = `<table>
+  <tr>
+    <th>Function</th><th>Role</th>
+    <th>Current</th><th>Optimal</th><th>Removed</th>
+    <th>Capacity</th><th>Shortage</th>
+  </tr>`;
+
+  data.rows.forEach(r=>{
+    html += `<tr>
+      <td>${r.Function}</td>
+      <td>${r.Role}</td>
+      <td>${r.Current}</td>
+      <td>${r.Optimal}</td>
+      <td>${r.Removed}</td>
+      <td>${r.Capacity}</td>
+      <td>${r.Shortage}</td>
+    </tr>`;
+  });
+
+  html += "</table>";
+  document.getElementById("results").innerHTML = html;
 }
 
-</script>
+loadWorkload();
 
+</script>
 </body>
 </html>
