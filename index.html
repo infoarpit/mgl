@@ -254,7 +254,7 @@ function runModel(){
   document.getElementById("status").innerHTML =
     "Running optimization…";
 
-  fetch("http://127.0.0.1:8000/optimize",{
+  fetch("https://mglbackend-production.up.railway.app/optimize",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({
@@ -305,3 +305,4 @@ function runModel(){
 
 </body>
 </html>
+
