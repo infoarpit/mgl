@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>MGL Manpower Optimization Dashboard</title>
+
+<style>
+
+body {
+  font-family: Inter, Segoe UI, Arial;
+  margin: 0;
+  background: #f3f5fa;
+}
+
+.app-header {
+  background: #1f3fb3;
+  color: white;
+  padding: 18px 26px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: .3px;
+}
+
+.container {
+  padding: 18px 26px;
+}
+
+.card {
+  background: white;
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 10px 18px rgba(0,0,0,.04);
+  border: 1px solid #e6ebff;
+}
+
+.card h3 {
+  margin-top: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing:.2px;
+}
+
+textarea, input {
+  border-radius: 10px;
+  border: 1px solid #cfd6ec;
+  padding: 8px 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 16px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+th {
+  background: #eef1ff;
+  padding: 8px;
+  border: 1px solid #dbe0f5;
+  font-weight: 600;
+}
+
+td {
+  border: 1px solid #e2e6f2;
+  padding: 6px;
+}
+
+input.table-input {
+  width: 90%;
+}
+
+button {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: .3px;
+}
+
+.run-btn {
+  background: #1f3fb3;
+  color: white;
+}
+
+.refresh-btn {
+  background: #6b7280;
+  color: white;
+}
+
+.results-card {
+  overflow-x: auto;
+}
+
+.success {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.warning {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.table-title {
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="app-header">
+  MGL Manpower Optimization Dashboard
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <h3>Define Functions & Roles</h3>
+
+    <div class="section-grid">
+      <div>
+        <label>Functions</label>
+        <textarea id="functions" rows="5">BusinessPlanning
+Projects
+Procurement
+Accounts
+HRAdmin</textarea>
+      </div>
+
+      <div>
+        <label>Roles (top → bottom hierarchy)</label>
+        <textarea id="roles" rows="5">Manager
+AsstManager
+Officer
+Executive</textarea>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="card">
+    <h3>Workload & Capacity</h3>
+
+    <label>Capacity per person (hrs/day)</label>
+    <input id="capacity" value="6.5">
+
+    <div class="table-title">Workload (hrs/day)</div>
+
+    <table id="workloadTable">
+      <thead>
+        <tr>
+          <th>Function</th>
+          <th>Workload</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+
+  <div class="card">
+    <h3>Headcount</h3>
+
+    <table id="hcTable">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+
+  <div class="card">
+    <button class="run-btn" onclick="runModel()">Run Optimization</button>
+    <button class="refresh-btn" onclick="buildTables()">Refresh Tables</button>
+
+    <div id="status" style="margin-top:10px"></div>
+  </div>
+
+
+  <div class="card results-card">
+    <h3>Results</h3>
+    <div id="results"></div>
+  </div>
+
+</div>
+
+
+<script>
+
+function parseLines(id){
+  return document.getElementById(id).value
+    .split("\n").map(x=>x.trim()).filter(x=>x);
+}
+
+function buildTables(){
+  const F=parseLines("functions");
+  const R=parseLines("roles");
+
+  // workload table
+  let wl = document.querySelector("#workloadTable tbody");
+  wl.innerHTML = F.map(f=>
+    `<tr><td>${f}</td><td><input class="table-input" value="0"></td></tr>`
+  ).join("");
+
+  // headcount table header
+  const head = `<tr><th>Function</th>${R.map(r=>`<th>${r}</th>`).join("")}</tr>`;
+  document.querySelector("#hcTable thead").innerHTML = head;
+
+  // headcount rows
+  const body = F.map(f=>
+    `<tr><td>${f}</td>
+    ${R.map(()=>`<td><input class="table-input" value="0"></td>`).join("")}
+    </tr>`
+  ).join("");
+
+  document.querySelector("#hcTable tbody").innerHTML = body;
+}
+
+buildTables();
+
+
+function runModel(){
+
+  const F=parseLines("functions");
+  const R=parseLines("roles");
+  const C=parseFloat(capacity.value);
+
+  const W={};
+  document.querySelectorAll("#workloadTable tbody tr").forEach(r=>{
+    W[r.children[0].innerText] =
+      parseFloat(r.children[1].children[0].value);
+  });
+
+  const N_current={};
+  document.querySelectorAll("#hcTable tbody tr").forEach(r=>{
+    const f=r.children[0].innerText;
+    R.forEach((role,i)=>{
+      N_current[`${f}|${role}`] =
+        parseInt(r.children[i+1].children[0].value);
+    });
+  });
+
+  document.getElementById("status").innerHTML =
+    "Running optimization…";
+
+  fetch("http://127.0.0.1:8000/optimize",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      F,R,W,C,N_current,
+      alpha:{},
+      penalty:Object.fromEntries(R.map(r=>[r,1])),
+      options:{
+        use_role_share:false,
+        use_manager_min:false,
+        manager_threshold:12,
+        use_span:false,
+        span:4
+      }
+    })
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    document.getElementById("status").innerHTML =
+      "<span class='success'>Optimization completed ✔</span>";
+
+    let html = `<table>
+      <tr>
+        <th>Function</th><th>Role</th>
+        <th>Current</th><th>Optimal</th><th>Removed</th>
+        <th>Capacity</th><th>Shortage</th>
+      </tr>`;
+
+    data.rows.forEach(r=>{
+      html += `<tr>
+        <td>${r.Function}</td><td>${r.Role}</td>
+        <td>${r.Current}</td><td>${r.Optimal}</td>
+        <td>${r.Removed}</td>
+        <td>${r.Capacity}</td>
+        <td>${r.Shortage}</td>
+      </tr>`;
+    });
+
+    html += "</table>";
+    results.innerHTML = html;
+  })
+  .catch(()=>{
+    document.getElementById("status").innerHTML =
+      "<span class='warning'>Backend not reachable</span>";
+  });
+}
+
+</script>
+
+</body>
+</html>
